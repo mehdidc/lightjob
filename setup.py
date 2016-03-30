@@ -21,5 +21,6 @@ setup(
                  'Operating System :: Unix',
                  'Operating System :: MacOS'],
     platforms='any',
-    packages=['lightjob']
+    packages=['lightjob'],
+    requires=['blitzdb']
 )
