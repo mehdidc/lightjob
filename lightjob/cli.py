@@ -1,11 +1,11 @@
 import click
 
 @click.group()
-def cli():
+def main():
     pass
 
 @click.command()
 def init():
     pass
 
-cli.add_command(init)
+main.add_command(init)

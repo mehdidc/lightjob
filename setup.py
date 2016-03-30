@@ -23,8 +23,9 @@ setup(
     platforms='any',
     packages=['lightjob'],
     requires=['tinydb', 'click'],
+    py_modules=['lightjob'],
     entry_points='''
     [console_scripts]
-    lightjob=lightjob.cli
+    lightjob=lightjob.cli:main
     ''' # http://click.pocoo.org/5/setuptools/#setuptools-integration
 )
