@@ -22,5 +22,9 @@ setup(
                  'Operating System :: MacOS'],
     platforms='any',
     packages=['lightjob'],
-    requires=['blitzdb']
+    requires=['tinydb', 'click'],
+    entry_points='''
+    [console_scripts]
+    lightjob=lightjob.cli
+    ''' # http://click.pocoo.org/5/setuptools/#setuptools-integration
 )
