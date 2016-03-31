@@ -1,6 +1,6 @@
 # Lightjob
 
-a lightweight job manager for machine learning researchers
+a lightweight job manager using a server-less json database (tinydb)
 
 ### install
 
@@ -10,10 +10,8 @@ cd lightjob
 python setup.py install
 ```
 
-### Pipeline
+### Pipeline example
 
 #### init
 
 lightjob init
-
-
