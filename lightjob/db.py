@@ -2,7 +2,7 @@ import sys
 import os
 from tinydb import TinyDB, where, Query
 from utils import summarize
-import tinyrecord
+from tinyrecord import transaction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,6 +28,9 @@ class DB(object):
         self.db = TinyDB(filename)
         self.jobs = self.db.table('Job')
 
+    def close(self):
+        self.db.close()
+
     def safe_add_job(self, d, **kw):
         if self.job_exists(d):
             logger.error("Error during adding Job {} : it already exists, canceling.".format(summarize(d)))
@@ -35,32 +38,58 @@ class DB(object):
         self.add_job(d, **kw)
         return 1
 
+    def safe_add_or_update_job(self, d, **kw):
+        if self.job_exists(d):
+            u = {}
+            u.update(kw)
+            u['content'] = d
+            s = summarize(d)
+            self.job_update(s, u)
+            return 0
+        self.add_job(d, **kw)
+        return 1
+
+
     def add_job(self, d, state=AVAILABLE, **meta):
-        return self.jobs.insert(dict(state=state, content=d, summary=summarize(d), **meta))
+        with transaction(self.jobs) as tr:
+            out = tr.insert(dict(state=state, content=d, summary=summarize(d), **meta))
+        return out
 
     def all_jobs(self):
         return self.jobs.all()
+
+    def jobs_with(self, **kw):
+        Job = Query()
+        q = [getattr(Job, k) == v for k, v in kw.items()]
+        if len(q) > 0:
+            q = reduce(lambda a, b: a & b, q)
+            return self.jobs.search(q)
+        else:
+            return self.jobs.all()
 
     def jobs_with_state(self, state):
         Job = Query()
         return self.jobs.search(Job.state == state)
 
     def modify_state_by_query(self, q, state):
-        self.jobs.update({"state": state}, q)
+        with transaction(self.jobs) as tr:
+            tr.update({"state": state}, q)
 
     def get_state_of(self, summary):
         return self.get_job_by_summary(summary)["state"]
 
     def modify_state_of(self, summary, state):
         Job = Query()
-        self.jobs.update({"state": state}, Job.summary == summary)
+        with transaction(self.jobs) as tr:
+            tr.update({"state": state}, Job.summary == summary)
 
     def job_exists(self, d):
         return self.job_exists_by_summary(summarize(d))
 
     def job_update(self, s, values):
         Job = Query()
-        self.jobs.update(values, Job.summary == s)
+        with transaction(self.jobs) as tr:
+            tr.update(values, Job.summary == s)
 
     def job_exists_by_summary(self, s):
         Job = Query()

@@ -37,24 +37,45 @@ def init(force, purge):
 
 @click.command()
 @click.option('--state', default=None, help='state', required=False)
+@click.option('--type', default=None, help='type', required=False)
 @click.option('--details', default=False, help='show with details', required=False)
-def show(state, details):
+def show(state, type, details):
     if details:
         import pprint
         def show(j):
-            pprint.pprint(j, indent=8)
+            pprint.pprint(j, indent=4)
     else:
         def show(j):
             logger.info(j['summary'])
     db = load_db()
+    kw = {}
     if state is not None:
-        jobs = db.jobs_with_state(state)
-    else:
-        jobs = db.all_jobs()
+        kw["state"] = state
+    if type is not None:
+        kw["type"] = type
+    jobs = db.jobs_with(**kw)
     logger.info("Number of jobs : {}".format(len(jobs)))
     for j in jobs:
         show(j)
 
+
+@click.command()
+@click.option('--state', help='state', required=True)
+@click.option('--details', help='details', required=False, type=bool)
+@click.option('--check', help='check', required=True, type=bool)
+@click.argument('jobs', nargs=-1, required=True)
+def update(state, details, check, jobs):
+    db = load_db()
+    for job in jobs:
+        print(job)
+        j = db.get_job_by_summary(job)
+        if details:
+            print(j)
+        print("Previous state of {} : {}".format(job, j["state"]))
+        if not check:
+            db.modify_state_of(job, state)
+            print("{} updated".format(job))
+            print("Previous state of {} : {}".format(job, state))
 
 @click.command()
 def ipython():
@@ -80,3 +101,4 @@ def get_dotfolder():
 main.add_command(show)
 main.add_command(init)
 main.add_command(ipython)
+main.add_command(update)
