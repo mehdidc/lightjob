@@ -31,6 +31,9 @@ class DB(object):
     def close(self):
         self.db.close()
 
+    def purge(self):
+        self.db.purge()
+
     def safe_add_job(self, d, **kw):
         if self.job_exists(d):
             logger.error("Error during adding Job {} : it already exists, canceling.".format(summarize(d)))

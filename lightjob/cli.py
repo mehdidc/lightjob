@@ -32,7 +32,7 @@ def init(force, purge):
     db = DB()
     db.load(folder)
     if purge:
-        db.jobs.purge()
+        db.purge()
 
 
 @click.command()
