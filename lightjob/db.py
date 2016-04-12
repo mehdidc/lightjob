@@ -2,7 +2,7 @@ import sys
 import os
 from tinydb import TinyDB, where, Query
 from blitzdb import Document, FileBackend
-from utils import summarize
+from utils import summarize, recur_update
 from tinyrecord import transaction
 import logging
 
@@ -16,18 +16,32 @@ DBFILENAME = "db.json"
 STATES = AVAILABLE, RUNNING, SUCCESS, ERROR = "available", "running", "success", "error"
 IDKEY = 'summary'
 
+
 class GenericDB(object):
 
+    def __init__(self):
+        self.loaded = False
+
     def load(self, filename, db_filename=DBFILENAME, idkey=IDKEY):
-        assert self.loaded is True, "Already loaded"
+        assert self.loaded is False, "Already loaded"
         if os.path.isdir(filename):
             filename = os.path.join(filename, db_filename)
         self.load_from_file(filename)
+        self.idkey = idkey
+
+    def load_from_file(self, filename):
+        raise NotImplementedError()
+
+    def insert_list(self, l):
+        raise NotImplementedError()
 
     def insert(self, d):
         raise NotImplementedError()
 
     def get(self, d):
+        raise NotImplementedError()
+
+    def get_by_id(self, id_):
         raise NotImplementedError()
 
     def update(self, d, id):
@@ -80,32 +94,51 @@ class GenericDB(object):
         self.update(values, s)
 
     def job_exists_by_summary(self, s):
-        return True if len(self.jobs.get(dict(summary=s))) else False
+        return True if self.get_by_id(s) is not None else False
 
     def get_job_by_summary(self, s):
-        jobs = self.jobs.get(dict(summary=s))
-        if len(jobs) == 1:
-            return jobs[0]
-        else:
-            return None
+        return self.get_by_id(s)
 
 
-class BlitzDBWrapper(object):
+class Job(Document):
+    class Meta(Document.Meta):
+        primary_key = IDKEY # TODO should depend on self.idkey
 
-    class Job(Document):
-        pass
+
+class BlitzDBWrapper(GenericDB):
+
+    def load_from_file(self, filename):
+        self.db = FileBackend(filename)
 
     def insert(self, d):
-        raise NotImplementedError()
+        self.insert_list([d])
+
+    def insert_list(self, l):
+        for j in l:
+            Job(j).save(self.db)
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        try:
+            return self.db.get(Job, {self.idkey: id_})
+        except Job.DoesNotExist:
+            return None
 
     def get(self, d):
-        raise NotImplementedError()
+        return self.db.filter(Job, d)
 
-    def update(self, d, id):
-        raise NotImplementedError()
+    def update(self, d, id_):
+        obj = self.get_by_id(id_)
+        recur_update(obj, d)
+        if obj is not None:
+            obj.save(self.db)
+            self.db.commit()
+            return True
+        else:
+            return False
 
     def close(self):
-        raise NotImplementedError()
+        self.loaded = False
 
 
 class TinyDBWrapper(object):
@@ -200,7 +233,8 @@ class TinyDBWrapper(object):
             return None
 
 
-DB = TinyDBWrapper
+DB = BlitzDBWrapper
 
-def migrate(source_filename, source_db, dest_filename, dest_db):
-    pass
+def migrate(source_db, dest_db):
+    for o in source_db.all_jobs():
+        dest_db.insert(o)

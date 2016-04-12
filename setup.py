@@ -22,7 +22,7 @@ setup(
                  'Operating System :: MacOS'],
     platforms='any',
     packages=['lightjob'],
-    requires=['tinydb', 'tinyrecord', 'click'],
+    requires=['tinydb', 'tinyrecord', 'blitzdb', 'click'],
     py_modules=['lightjob'],
     entry_points='''
     [console_scripts]

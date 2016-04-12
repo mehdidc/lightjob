@@ -62,9 +62,9 @@ def show(state, type, details):
 @click.command()
 @click.option('--state', help='state', required=True)
 @click.option('--details', help='details', required=False, type=bool)
-@click.option('--check', help='check', required=True, type=bool)
+@click.option('--dryrun', help='dry run', required=True, type=bool)
 @click.argument('jobs', nargs=-1, required=True)
-def update(state, details, check, jobs):
+def update(state, details, dryrun, jobs):
     db = load_db()
     for job in jobs:
         print(job)
@@ -72,7 +72,7 @@ def update(state, details, check, jobs):
         if details:
             print(j)
         print("Previous state of {} : {}".format(job, j["state"]))
-        if not check:
+        if dryrun is False:
             db.modify_state_of(job, state)
             print("{} updated".format(job))
             print("Previous state of {} : {}".format(job, state))
