@@ -14,7 +14,7 @@ logger.setLevel(logging.INFO)
 
 
 DBFILENAME = "db.json"
-STATES = AVAILABLE, RUNNING, SUCCESS, ERROR = "available", "running", "success", "error"
+STATES = AVAILABLE, RUNNING, SUCCESS, ERROR, PENDING = "available", "running", "success", "error", "pending"
 IDKEY = 'summary'
 
 
