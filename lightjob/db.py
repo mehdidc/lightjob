@@ -5,6 +5,7 @@ from blitzdb import Document, FileBackend
 from utils import summarize, recur_update
 from tinyrecord import transaction
 import logging
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -69,8 +70,9 @@ class GenericDB(object):
         return 1
 
     def add_job(self, d, state=AVAILABLE, **meta):
-        is_success = self.insert(dict(state=state, content=d, summary=summarize(d), **meta))
-        return is_success
+        s = summarize(d)
+        self.insert(dict(state=state, content=d, summary=s, **meta))
+        self.modify_state_of(s, state)
 
     def all_jobs(self):
         return self.get(dict())
@@ -84,8 +86,17 @@ class GenericDB(object):
     def get_state_of(self, summary):
         return self.get_job_by_summary(summary)["state"]
 
-    def modify_state_of(self, summary, state):
+    def modify_state_of(self, summary, state, dt=None):
         self.update(dict(state=state), summary)
+        if dt is None:
+            dt = datetime.now()
+        j = self.get_job_by_summary(summary)
+        if "life" in j:
+            life = j["life"]
+        else:
+            life = []
+        life.append(dict(state=state, dt=dt))
+        self.update(dict(life=life), summary)
 
     def job_exists(self, d):
         return self.job_exists_by_summary(summarize(d))
