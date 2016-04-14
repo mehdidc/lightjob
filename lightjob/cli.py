@@ -71,6 +71,7 @@ def update(state, details, dryrun, jobs):
         j = db.get_job_by_summary(job)
         if details:
             print(j)
+            print('')
         print("Previous state of {} : {}".format(job, j["state"]))
         if dryrun is False:
             db.modify_state_of(job, state)
