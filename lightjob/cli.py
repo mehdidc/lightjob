@@ -78,10 +78,10 @@ def update(state, details, dryrun, jobs):
             print("{} updated".format(job))
             print("Previous state of {} : {}".format(job, state))
 
+
 @click.command()
 def ipython():
     from IPython import embed
-    from tinydb import Query
     db = load_db()
     embed()
 
