@@ -22,7 +22,7 @@ def main():
 @click.option('--force', default=False, help='Force init if exists', required=False)
 @click.option('--purge', default=False, help='Force purge database (WARNING : dangerous!)', required=False)
 def init(force, purge):
-    folder = get_dotfolder()
+    folder = './{}'.format(DOTDIR)
     if os.path.exists(folder):
         if not force:
             logger.error("{} Already exists, cancel init".format(folder))
