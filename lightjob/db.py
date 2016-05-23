@@ -49,6 +49,9 @@ class GenericDB(object):
     def close(self):
         raise NotImplementedError()
 
+    def delete(self, d):
+        raise NotImplementedError()
+
     def safe_add_job(self, d, **kw):
         if self.job_exists(d):
             logger.error("Error during adding Job {} : it already exists, canceling.".format(summarize(d)))
@@ -132,6 +135,10 @@ class BlitzDBWrapper(GenericDB):
             return self.db.get(Job, {self.idkey: id_})
         except Job.DoesNotExist:
             return None
+
+    def delete(self, d):
+        for el in self.get(d):
+            self.db.delete(el)
 
     def get(self, d):
         return self.db.filter(Job, d)
