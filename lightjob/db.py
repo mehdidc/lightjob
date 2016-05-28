@@ -1,9 +1,11 @@
 import sys
 import os
 from blitzdb import Document, FileBackend
+import dataset
 from utils import summarize, recur_update
 import logging
 from datetime import datetime
+import json
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -72,7 +74,7 @@ class GenericDB(object):
 
     def add_job(self, d, state=AVAILABLE, **meta):
         s = summarize(d)
-        self.insert(dict(state=state, content=d, summary=s, **meta))
+        self.insert(dict(state=state, content=d, summary=s, life=[], **meta))
         self.modify_state_of(s, state)
 
     def all_jobs(self):
@@ -117,7 +119,7 @@ class Job(Document):
         primary_key = IDKEY # TODO should depend on self.idkey
 
 
-class BlitzDBWrapper(GenericDB):
+class Blitz(GenericDB):
 
     def load_from_file(self, filename):
         self.db = FileBackend(filename)
@@ -156,4 +158,66 @@ class BlitzDBWrapper(GenericDB):
     def close(self):
         self.loaded = False
 
-DB = BlitzDBWrapper
+
+class Dataset(GenericDB):
+
+    def load_from_file(self, filename):
+        filename = 'sqlite:///{}'.format(filename)
+        self.db = dataset.connect(filename)
+        self.table = self.db['table']
+
+    def insert(self, d):
+        self.table.insert(self._preprocess(d))
+
+    def _preprocess(self, d):
+        return {k: self._preprocess_element(v) for k, v in d.items()}
+
+    def _preprocess_element(self, d):
+        if type(d) == dict or type(d) == list:
+            return json.dumps(d, default=date_handler)
+        else:
+            return d
+
+    def _deprocess(self, d):
+        return {k: self._deprocess_element(v) for k, v in d.items()}
+
+    def _deprocess_element(self, d):
+        try:
+            return json.loads(d)
+        except Exception:
+            return d
+
+    def insert_list(self, l):
+        self.db.begin()
+        for d in l:
+            self.table.insert(self._preprocess(d))
+        self.db.commit()
+
+    def get_by_id(self, id_):
+        return self._deprocess(self.table.find_one(summary=id_))
+
+    def delete(self, d):
+        d = self._preprocess(d)
+        self.table.delete(**d)
+
+    def get(self, d):
+        d = self._preprocess(d)
+        return map(self._deprocess, self.table.find(**d))
+
+    def update(self, d, id_):
+        d = self._preprocess(d)
+        d[self.idkey] = id_
+        self.table.update(d, [self.idkey])
+
+    def close(self):
+        self.loaded = False
+        self.db.close()
+
+def date_handler(obj):
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    else:
+        raise TypeError
+
+def DB(backend=Blitz, **kw):
+    return backend(**kw)

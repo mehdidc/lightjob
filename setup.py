@@ -22,7 +22,7 @@ setup(
                  'Operating System :: MacOS'],
     platforms='any',
     packages=['lightjob'],
-    requires=['blitzdb', 'click'],
+    requires=['blitzdb', 'click', 'dataset'],
     py_modules=['lightjob'],
     entry_points='''
     [console_scripts]

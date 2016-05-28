@@ -82,13 +82,13 @@ def update(state, details, dryrun, jobs):
 @click.command()
 def ipython():
     from IPython import embed
-    db = load_db()
+    db = load_db() #NOQA
     embed()
 
 
-def load_db():
+def load_db(**kw):
     folder = get_dotfolder()
-    db = DB()
+    db = DB(**kw)
     db.load(folder)
     return db
 
