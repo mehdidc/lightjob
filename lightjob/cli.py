@@ -4,6 +4,7 @@ import click
 from utils import mkdir_path, backward_search
 from db import DB
 import logging
+import json
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -88,6 +89,11 @@ def ipython():
 
 def load_db(**kw):
     folder = get_dotfolder()
+    rcfilename = os.path.join(folder, '.lightjobrc')
+    if os.path.exists(rcfilename):
+        params = json.load(open(rcfilename))
+        kw.update(params)
+    print(kw)
     db = DB(**kw)
     db.load(folder)
     return db

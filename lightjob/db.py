@@ -23,14 +23,12 @@ class GenericDB(object):
     def __init__(self):
         self.loaded = False
 
-    def load(self, filename, db_filename=DBFILENAME, idkey=IDKEY):
+    def load(self, filename, idkey=IDKEY):
         assert self.loaded is False, "Already loaded"
-        if os.path.isdir(filename):
-            filename = os.path.join(filename, db_filename)
-        self.load_from_file(filename)
+        self.load_from_dir(filename)
         self.idkey = idkey
 
-    def load_from_file(self, filename):
+    def load_from_dir(self, filename):
         raise NotImplementedError()
 
     def insert_list(self, l):
@@ -113,6 +111,9 @@ class GenericDB(object):
     def get_job_by_summary(self, s):
         return self.get_by_id(s)
 
+    def close(self):
+        self.db.close()
+
 
 class Job(Document):
     class Meta(Document.Meta):
@@ -121,8 +122,8 @@ class Job(Document):
 
 class Blitz(GenericDB):
 
-    def load_from_file(self, filename):
-        self.db = FileBackend(filename)
+    def load_from_dir(self, filename):
+        self.db = FileBackend(os.path.join(filename, DBFILENAME))
 
     def insert(self, d):
         self.insert_list([d])
@@ -161,8 +162,8 @@ class Blitz(GenericDB):
 
 class Dataset(GenericDB):
 
-    def load_from_file(self, filename):
-        filename = 'sqlite:///{}'.format(filename)
+    def load_from_dir(self, filename):
+        filename = 'sqlite:///{}/db'.format(filename)
         self.db = dataset.connect(filename)
         self.table = self.db['table']
 
@@ -211,7 +212,6 @@ class Dataset(GenericDB):
 
     def close(self):
         self.loaded = False
-        self.db.close()
 
 def date_handler(obj):
     if hasattr(obj, 'isoformat'):
@@ -220,4 +220,6 @@ def date_handler(obj):
         raise TypeError
 
 def DB(backend=Blitz, **kw):
+    if type(backend) in (str, unicode):
+        backend = {'Blitz': Blitz, 'Dataset': Dataset}.get(backend, Blitz)
     return backend(**kw)
