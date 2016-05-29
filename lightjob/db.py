@@ -195,7 +195,11 @@ class Dataset(GenericDB):
         self.db.commit()
 
     def get_by_id(self, id_):
-        return self._deprocess(self.table.find_one(summary=id_))
+        j = self.table.find_one(summary=id_)
+        if j is None:
+            return None
+        else:
+            return self._deprocess(j)
 
     def delete(self, d):
         d = self._preprocess(d)

@@ -43,6 +43,7 @@ class BaseTest(object):
         s = summarize(d)
         self.db.add_job(d)
         assert self.db.job_exists_by_summary(s)
+        assert self.db.job_exists(d)
 
     def test_with(self):
         d = {'a': 1, 'b': 2}
@@ -53,6 +54,11 @@ class BaseTest(object):
         self.db.add_job(d, x=3, y=2)
         jobs = self.db.jobs_with(x=1)
         assert len(jobs) == 2
+
+    def test_safe_add(self):
+        d = {'a': 1, 'b': 2}
+        assert self.db.safe_add_job(d) == 1
+        assert self.db.safe_add_job(d) == 0
 
 
 def with_backend(cls, backend):
