@@ -174,7 +174,7 @@ class Dataset(GenericDB):
         return {k: self._preprocess_element(v) for k, v in d.items()}
 
     def _preprocess_element(self, d):
-        if type(d) == dict or type(d) == list:
+        if isinstance(d, dict) or type(d) == list:
             return json.dumps(d, default=date_handler)
         else:
             return d
