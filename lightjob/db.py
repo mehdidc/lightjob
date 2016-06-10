@@ -204,7 +204,6 @@ class Dataset(GenericDB):
     def delete(self, d):
         d = self._preprocess(d)
         self.table.delete(**d)
-        self.db.commit()
 
     def get(self, d):
         d = self._preprocess(d)

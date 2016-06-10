@@ -55,7 +55,8 @@ def show(state, type, details):
     if type is not None:
         kw["type"] = type
     jobs = db.jobs_with(**kw)
-    logger.info("Number of jobs : {}".format(len(jobs)))
+    if details:
+        logger.info("Number of jobs : {}".format(len(jobs)))
     for j in jobs:
         show(j)
 
@@ -93,7 +94,6 @@ def load_db(**kw):
     if os.path.exists(rcfilename):
         params = json.load(open(rcfilename))
         kw.update(params)
-    print(kw)
     db = DB(**kw)
     db.load(folder)
     return db
