@@ -74,12 +74,16 @@ class GenericDB(object):
         s = summarize(d)
         self.insert(dict(state=state, content=d, summary=s, life=[], **meta))
         self.modify_state_of(s, state)
+        return s
 
     def all_jobs(self):
         return self.get(dict())
 
     def jobs_with(self, **kw):
         return self.get(kw)
+
+    def jobs_filter(self, fn):
+        return filter(fn, self.get(dict()))
 
     def jobs_with_state(self, state):
         return self.get(dict(state=state))

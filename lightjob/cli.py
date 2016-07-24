@@ -39,8 +39,9 @@ def init(force, purge):
 @click.command()
 @click.option('--state', default=None, help='state', required=False)
 @click.option('--type', default=None, help='type', required=False)
+@click.option('--where', default=None, help='where', required=False)
 @click.option('--details', default=False, help='show with details', required=False)
-def show(state, type, details):
+def show(state, type, where, details):
     if details:
         import pprint
         def show(j):
@@ -54,6 +55,8 @@ def show(state, type, details):
         kw["state"] = state
     if type is not None:
         kw["type"] = type
+    if where is not None:
+        kw['where'] = where
     jobs = db.jobs_with(**kw)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
