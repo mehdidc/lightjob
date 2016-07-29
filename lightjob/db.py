@@ -82,8 +82,8 @@ class GenericDB(object):
     def jobs_with(self, **kw):
         return self.get(kw)
 
-    def jobs_filter(self, fn):
-        return filter(fn, self.get(dict()))
+    def jobs_filter(self, fn, **kw):
+        return filter(fn, self.get(kw))
 
     def jobs_with_state(self, state):
         return self.get(dict(state=state))
@@ -108,6 +108,33 @@ class GenericDB(object):
 
     def job_update(self, s, values):
         self.update(values, s)
+
+    def get_values(self, field, **kw):
+        jobs = self.jobs_with(**kw)
+        for j in jobs:
+            s = j['summary']
+            try:
+                value = self.get_value(j, field)
+            except ValueError:
+                continue
+            else:
+                yield {field: j, 'job': j}
+
+
+    def get_value(self, job, field):
+        j = job
+        field_comps = field.split('.')
+        found = True
+        for comp in field_comps:
+            if not j or (j and comp not in j):
+                found = False
+                break
+            else:
+                j = j[comp]
+        if found:
+            return j
+        else:
+            raise ValueError('field {} does not exist'.format(field))
 
     def job_exists_by_summary(self, s):
         return True if self.get_by_id(s) is not None else False

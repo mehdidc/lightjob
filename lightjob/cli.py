@@ -41,11 +41,22 @@ def init(force, purge):
 @click.option('--type', default=None, help='type', required=False)
 @click.option('--where', default=None, help='where', required=False)
 @click.option('--details', default=False, help='show with details', required=False)
-def show(state, type, where, details):
+@click.option('--fields', default='', help='show values of fields separated by comma', required=False)
+def show(state, type, where, details, fields):
     if details:
         import pprint
         def show(j):
-            pprint.pprint(j, indent=4)
+            if fields:
+                vals = []
+                for field in fields.split(','):
+                    try:
+                        val = db.get_value(j, field)
+                    except ValueError:
+                        val = None
+                    vals.append(val)
+                print(' '.join(map(str, vals)))
+            else:
+                pprint.pprint(j, indent=4)
     else:
         def show(j):
             logger.info(j['summary'])
@@ -85,6 +96,17 @@ def update(state, details, dryrun, jobs):
 
 
 @click.command()
+@click.option('--dryrun', help='dry run', required=True, type=bool)
+@click.argument('jobs', nargs=-1, required=True)
+def delete(dryrun, jobs):
+    db = load_db()
+    for job in jobs:
+        print(job)
+        if dryrun is False:
+            db.delete({'summary': job})
+
+
+@click.command()
 def ipython():
     from IPython import embed
     db = load_db() #NOQA
@@ -112,3 +134,4 @@ main.add_command(show)
 main.add_command(init)
 main.add_command(ipython)
 main.add_command(update)
+main.add_command(delete)
