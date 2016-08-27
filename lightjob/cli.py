@@ -6,6 +6,9 @@ from db import DB
 import logging
 import json
 
+from dateutil import parser
+
+
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
@@ -42,7 +45,10 @@ def init(force, purge):
 @click.option('--where', default=None, help='where', required=False)
 @click.option('--details', default=False, help='show with details', required=False)
 @click.option('--fields', default='', help='show values of fields separated by comma', required=False)
-def show(state, type, where, details, fields):
+@click.option('--summary', default='', help='show a specific job', required=False)
+@click.option('--sort/--no-sort', default=False, help='sort by last state time', required=False)
+def show(state, type, where, details, fields, summary, sort):
+    import pandas as pd
     if details:
         import pprint
         def show(j):
@@ -62,6 +68,8 @@ def show(state, type, where, details, fields):
             logger.info(j['summary'])
     db = load_db()
     kw = {}
+    if summary:
+        kw['summary'] = summary
     if state is not None:
         kw["state"] = state
     if type is not None:
@@ -69,8 +77,12 @@ def show(state, type, where, details, fields):
     if where is not None:
         kw['where'] = where
     jobs = db.jobs_with(**kw)
+    if sort:
+        jobs = list(jobs)
+        jobs = sorted(jobs, key=lambda j:parser.parse(j['life'][-1]['dt']))
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
+
     for j in jobs:
         show(j)
 

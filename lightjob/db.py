@@ -118,7 +118,7 @@ class GenericDB(object):
             except ValueError:
                 continue
             else:
-                yield {field: j, 'job': j}
+                yield {field: value, 'job': j}
 
 
     def get_value(self, job, field):
