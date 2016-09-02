@@ -46,7 +46,7 @@ def init(force, purge):
 @click.option('--details', default=False, help='show with details', required=False)
 @click.option('--fields', default='', help='show values of fields separated by comma', required=False)
 @click.option('--summary', default='', help='show a specific job', required=False)
-@click.option('--sort/--no-sort', default=False, help='sort by last state time', required=False)
+@click.option('--sort', default='', help='sort by some field or time', required=False)
 def show(state, type, where, details, fields, summary, sort):
     import pandas as pd
     if details:
@@ -79,7 +79,11 @@ def show(state, type, where, details, fields, summary, sort):
     jobs = db.jobs_with(**kw)
     if sort:
         jobs = list(jobs)
-        jobs = sorted(jobs, key=lambda j:parser.parse(j['life'][-1]['dt']))
+        if sort == 'time':
+            key = lambda j:parser.parse(j['life'][-1]['dt'])
+        else:
+            key = lambda j:db.get_value(j, sort)
+        jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
 
