@@ -129,13 +129,15 @@ def ipython():
     embed()
 
 
-def load_db(**kw):
-    folder = get_dotfolder()
+def load_db(folder=None):
+    if folder is None:
+        folder = get_dotfolder()
     rcfilename = os.path.join(folder, '.lightjobrc')
     if os.path.exists(rcfilename):
         params = json.load(open(rcfilename))
-        kw.update(params)
-    db = DB(**kw)
+    else:
+        params = {}
+    db = DB(**params)
     db.load(folder)
     return db
 
