@@ -7,7 +7,7 @@ import logging
 import json
 
 from dateutil import parser
-
+import math
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -25,7 +25,8 @@ def main():
 @click.command()
 @click.option('--force', default=False, help='Force init if exists', required=False)
 @click.option('--purge', default=False, help='Force purge database (WARNING : dangerous!)', required=False)
-def init(force, purge):
+@click.option('--backend', default='Blitz', help='Blitz/Dataset/H5py', required=False)
+def init(force, purge, backend):
     folder = './{}'.format(DOTDIR)
     if os.path.exists(folder):
         if not force:
@@ -33,7 +34,10 @@ def init(force, purge):
             return
     mkdir_path(folder)
     logger.info("Init on : {}".format(folder))
-    db = DB()
+    rcfilename = open(os.path.join(folder, '.lightjobrc'), 'w')
+    rcfilename.write('{"backend": "%s"}' % (backend,))
+    rcfilename.close()
+    db = DB(backend=backend)
     db.load(folder)
     if purge:
         db.purge()
@@ -80,9 +84,14 @@ def show(state, type, where, details, fields, summary, sort):
     if sort:
         jobs = list(jobs)
         if sort == 'time':
-            key = lambda j:parser.parse(j['life'][-1]['dt'])
+            def key(j):
+                return parser.parse(j['life'][-1]['dt'])
         else:
-            key = lambda j:db.get_value(j, sort)
+            def key(j):
+                val = db.get_value(j, sort)
+                if math.isnan(val):
+                    return float('inf')
+                return val
         jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))

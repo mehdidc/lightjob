@@ -1,11 +1,13 @@
 import sys
 import os
 from blitzdb import Document, FileBackend
+import h5py
 import dataset
 from utils import summarize, recur_update
 import logging
 from datetime import datetime
 import json
+import collections
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -254,7 +256,62 @@ def date_handler(obj):
     else:
         raise TypeError
 
+
+class H5py(GenericDB):
+
+    def load_from_dir(self, filename):
+        self.db  = h5py.File(filename + 'db.hdf5')
+
+    def insert(self, d):
+        self.db.attrs[d['summary']] = json.dumps(d, default=date_handler)
+
+    def insert_list(self, l):
+        for j in l:
+            self.insert(j)
+
+    def get_by_id(self, id_):
+        d = self.db.attrs.get(id_, None)
+        return json.loads(d) if d else None
+
+    def delete(self, d):
+        del self.db.attrs[d['summary']]
+
+    def get(self, d):
+        o = map(json.loads, self.db.attrs.values())
+        o = filter(lambda v: match(v, d), o)
+        return o
+
+    def update(self, d, id_):
+        obj = self.get_by_id(id_)
+        recur_update(obj, d)
+        if obj is not None:
+            self.db.attrs[id_] = json.dumps(obj, default=date_handler)
+            return True
+        else:
+            return False
+
+    def close(self):
+        self.loaded = False
+        self.db.close()
+
+def match(d, d_ref):
+    d = flatten_dict(d)
+    d_ref = flatten_dict(d_ref)
+    for k, v in d.items():
+        if k in d_ref and d_ref[k] != v:
+            return False
+    return True
+
+def flatten_dict(l):
+    d = {}
+    for k, v in l.items():
+        if isinstance(v, collections.Mapping):
+            d.update(flatten_dict(v))
+        else:
+            d[k] = v
+    return d
+
 def DB(backend=Blitz, **kw):
     if type(backend) in (str, unicode):
-        backend = {'Blitz': Blitz, 'Dataset': Dataset}.get(backend, Blitz)
+        backend = {'Blitz': Blitz, 'Dataset': Dataset, 'H5py': H5py}.get(backend, Blitz)
     return backend(**kw)

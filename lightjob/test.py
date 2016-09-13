@@ -1,7 +1,7 @@
 import os, shutil
 from lightjob.db import DB, AVAILABLE, SUCCESS, RUNNING, ERROR
 from lightjob.utils import summarize
-from db import Blitz, Dataset
+from db import Blitz, Dataset, H5py
 from tempfile import mkdtemp
 
 
@@ -70,6 +70,8 @@ def with_backend(cls, backend):
 
 TestBlitz = with_backend(BaseTest, backend=Blitz)
 TestDataset = with_backend(BaseTest, backend=Dataset)
+TestH5py = with_backend(BaseTest, backend=H5py)
+
 
 
 if __name__ == '__main__':
