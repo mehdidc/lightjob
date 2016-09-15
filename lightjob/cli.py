@@ -47,11 +47,12 @@ def init(force, purge, backend):
 @click.option('--state', default=None, help='state', required=False)
 @click.option('--type', default=None, help='type', required=False)
 @click.option('--where', default=None, help='where', required=False)
-@click.option('--details', default=False, help='show with details', required=False)
+@click.option('--details/--no-details', default=False, help='show with details', required=False)
 @click.option('--fields', default='', help='show values of fields separated by comma', required=False)
 @click.option('--summary', default='', help='show a specific job', required=False)
 @click.option('--sort', default='', help='sort by some field or time', required=False)
-def show(state, type, where, details, fields, summary, sort):
+@click.option('--export/--no-export', default=False, help='export to json', required=False)
+def show(state, type, where, details, fields, summary, sort, export):
     import pandas as pd
     if details:
         import pprint
@@ -81,28 +82,59 @@ def show(state, type, where, details, fields, summary, sort):
     if where is not None:
         kw['where'] = where
     jobs = db.jobs_with(**kw)
-    if sort:
-        jobs = list(jobs)
-        if sort == 'time':
-            def key(j):
-                return parser.parse(j['life'][-1]['dt'])
+
+    def get_last(filter_func, L, default='none'):
+        for el in L[::-1]:
+            if filter_func(el):
+                return el
+        return default
+    
+
+    def parse_time(j, tag='start', default='2000-01-01 00:00:00.00000'):
+        if 'life' in j and j['life']:
+            life = j['life']
+            if tag == 'end':
+                moment = get_last(lambda l:l['state']=='success', life, default={'dt':default})
+                dt = moment['dt']
+            elif tag == 'start':
+                moment = get_last(lambda l:l['state']=='running', life, default={'dt': default})
+                dt = moment['dt']
+            else:
+                raise Exception('invalid tag : {}'.format(tag))
+            dt = parser.parse(dt)
+            return dt
         else:
-            def key(j):
-                val = db.get_value(j, sort)
-                if math.isnan(val):
-                    return float('inf')
-                return val
+            return parser.parse(default)
+    jobs = list(jobs)
+    for j in jobs:
+        j['start_time'] = parse_time(j, tag='start')
+        j['end_time'] = parse_time(j, tag='end')
+        try:
+            j['duration'] = j['end_time'] - j['start_time']
+        except Exception:
+            j['duration'] = 'none'
+    if sort:
+        def key(j):
+            val = db.get_value(j, sort)
+            if val and isinstance(val, float) and math.isnan(val):
+                return float('inf')
+            return val
         jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
 
     for j in jobs:
         show(j)
+    if export:
+        for j in jobs:
+            fd = open(j['summary'] + '.json', 'w')
+            fd.write(json.dumps(j['content'], indent=4))
+            fd.close()
 
 
 @click.command()
 @click.option('--state', help='state', required=True)
-@click.option('--details', help='details', required=False, type=bool)
+@click.option('--details', help='details', required=False, type=bool, default=True)
 @click.option('--dryrun', help='dry run', required=True, type=bool)
 @click.argument('jobs', nargs=-1, required=True)
 def update(state, details, dryrun, jobs):
