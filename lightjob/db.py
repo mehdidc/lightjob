@@ -18,7 +18,7 @@ logger.setLevel(logging.INFO)
 DBFILENAME = "db.json"
 STATES = AVAILABLE, RUNNING, SUCCESS, ERROR, PENDING, DELETED = "available", "running", "success", "error", "pending", "deleted"
 IDKEY = 'summary'
-
+AGG = {'min': min, 'max': max, 'last': lambda l:l[-1], 'first':lambda l:l[0], 'sum':lambda l:sum(l)}
 
 class GenericDB(object):
 
@@ -128,13 +128,18 @@ class GenericDB(object):
         field_comps = field.split('.')
         found = True
         for comp in field_comps:
+            if ':' in comp:
+                comp, agg = comp.split(':', 2)
+                agg = AGG[agg]
+            else:
+                agg = lambda x:x
             if not j or (j and comp not in j):
                 found = False
                 break
             else:
                 j = j[comp]
         if found:
-            return j
+            return agg(j)
         else:
             raise ValueError('field {} does not exist'.format(field))
 
