@@ -109,6 +109,8 @@ def show(state, type, where, details, fields, summary, sort, export):
     for j in jobs:
         j['start_time'] = parse_time(j, tag='start')
         j['end_time'] = parse_time(j, tag='end')
+        j['readable_start_time'] = str(j['start_time'])
+        j['readable_end_time'] = str(j['end_time'])
         try:
             j['duration'] = j['end_time'] - j['start_time']
         except Exception:
