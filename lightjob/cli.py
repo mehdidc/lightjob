@@ -5,10 +5,9 @@ from utils import mkdir_path, backward_search
 from db import DB
 import logging
 import json
-
+import pandas as pd
 from dateutil import parser
 import math
-
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
@@ -53,11 +52,15 @@ def init(force, purge, backend):
 @click.option('--sort', default='', help='sort by some field or time', required=False)
 @click.option('--export/--no-export', default=False, help='export to json', required=False)
 def show(state, type, where, details, fields, summary, sort, export):
-    import pandas as pd
+    try:
+        from tabulate import tabulate
+    except ImportError:
+        tabulate = lambda x:x
+    import pprint
+
     if details:
-        import pprint
-        def show(j):
-            if fields:
+        if fields:
+            def format_job(j):
                 vals = []
                 for field in fields.split(','):
                     try:
@@ -65,12 +68,11 @@ def show(state, type, where, details, fields, summary, sort, export):
                     except ValueError:
                         val = None
                     vals.append(val)
-                print(' '.join(map(str, vals)))
-            else:
-                pprint.pprint(j, indent=4)
+                return map(str, vals)
+        else: 
+            format_job = lambda j:pprint.pformat(j, indent=4)
     else:
-        def show(j):
-            logger.info(j['summary'])
+        format_job = lambda j:j['summary']
     db = load_db()
     kw = {}
     if summary:
@@ -124,9 +126,17 @@ def show(state, type, where, details, fields, summary, sort, export):
         jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
-
-    for j in jobs:
-        show(j)
+    
+    if fields != '':
+        header = [fields.split(',')]
+    else:
+        header = []
+    jobs = map(format_job, jobs)
+    if fields != '':
+        print(tabulate(header + jobs))
+    else:
+        for j in jobs:
+            print(j)
     if export:
         for j in jobs:
             fd = open(j['summary'] + '.json', 'w')
