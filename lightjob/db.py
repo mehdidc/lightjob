@@ -3,7 +3,7 @@ import os
 from blitzdb import Document, FileBackend
 import h5py
 import dataset
-from utils import summarize, recur_update
+from utils import summarize, recur_update, dict_format, match, flatten_dict
 import logging
 from datetime import datetime
 import json
@@ -14,15 +14,13 @@ handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
-
 DBFILENAME = "db.json"
 STATES = AVAILABLE, RUNNING, SUCCESS, ERROR, PENDING, DELETED = "available", "running", "success", "error", "pending", "deleted"
 IDKEY = 'summary'
-AGG = {'min': min, 'max': max, 'last': lambda l:l[-1], 'first':lambda l:l[0], 'sum':lambda l:sum(l)}
 
 class GenericDB(object):
 
-    def __init__(self):
+    def __init__(self, **kw):
         self.loaded = False
 
     def load(self, filename, idkey=IDKEY):
@@ -122,26 +120,8 @@ class GenericDB(object):
             else:
                 yield {field: value, 'job': j}
 
-
-    def get_value(self, job, field):
-        j = job
-        field_comps = field.split('.')
-        found = True
-        for comp in field_comps:
-            if ':' in comp:
-                comp, agg = comp.split(':', 2)
-                agg = AGG[agg]
-            else:
-                agg = lambda x:x
-            if not j or (j and comp not in j):
-                found = False
-                break
-            else:
-                j = j[comp]
-        if found:
-            return agg(j)
-        else:
-            raise ValueError('field {} does not exist'.format(field))
+    def get_value(self, job, field, dict_format=dict_format, **kw):
+        return dict_format(job, field, **kw)
 
     def job_exists_by_summary(self, s):
         return True if self.get_by_id(s) is not None else False
@@ -298,23 +278,6 @@ class H5py(GenericDB):
     def close(self):
         self.loaded = False
         self.db.close()
-
-def match(d, d_ref):
-    d = flatten_dict(d)
-    d_ref = flatten_dict(d_ref)
-    for k, v in d.items():
-        if k in d_ref and d_ref[k] != v:
-            return False
-    return True
-
-def flatten_dict(l):
-    d = {}
-    for k, v in l.items():
-        if isinstance(v, collections.Mapping):
-            d.update(flatten_dict(v))
-        else:
-            d[k] = v
-    return d
 
 def DB(backend=Blitz, **kw):
     if type(backend) in (str, unicode):

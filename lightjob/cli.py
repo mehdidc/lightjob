@@ -2,12 +2,16 @@ import sys
 import os
 import click
 from utils import mkdir_path, backward_search
+from utils import dict_format as default_dict_format
 from db import DB
 import logging
 import json
 import pandas as pd
 from dateutil import parser
 import math
+
+import importlib
+
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
@@ -41,6 +45,15 @@ def init(force, purge, backend):
     if purge:
         db.purge()
 
+@click.command()
+@click.option('--filename', default='db.json', help='filename', required=False)
+def dump(filename):
+    db = load_db()
+    kw = {}
+    jobs = db.jobs_with(**kw)
+    jobs = list(jobs)
+    with open(filename, 'w') as fd:
+        json.dump(jobs, fd, indent=2)
 
 @click.command()
 @click.option('--state', default=None, help='state', required=False)
@@ -51,12 +64,24 @@ def init(force, purge, backend):
 @click.option('--summary', default='', help='show a specific job', required=False)
 @click.option('--sort', default='', help='sort by some field or time', required=False)
 @click.option('--export/--no-export', default=False, help='export to json', required=False)
-def show(state, type, where, details, fields, summary, sort, export):
+def show(state, type, where, details, fields, summary, sort, export): 
     try:
         from tabulate import tabulate
     except ImportError:
         tabulate = lambda x:x
     import pprint
+
+    db = load_db()
+    params = get_db_params()
+    if 'dict_format' in params:
+        dict_format = params['dict_format']
+        sys.path.append(os.getcwd())
+        s = dict_format.split('.')
+        module = '.'.join(s[0:-1])
+        name = s[-1]
+        dict_format = getattr(importlib.import_module(module), name)
+    else:
+        dict_format = default_dict_format
 
     if details:
         if fields:
@@ -64,16 +89,15 @@ def show(state, type, where, details, fields, summary, sort, export):
                 vals = []
                 for field in fields.split(','):
                     try:
-                        val = db.get_value(j, field)
+                        val = dict_format(j, field)
                     except ValueError:
                         val = None
                     vals.append(val)
                 return map(str, vals)
         else: 
-            format_job = lambda j:pprint.pformat(j, indent=4)
+            format_job = lambda j:pprint.pformat(j, indent=2)
     else:
         format_job = lambda j:j['summary']
-    db = load_db()
     kw = {}
     if summary:
         kw['summary'] = summary
@@ -90,7 +114,6 @@ def show(state, type, where, details, fields, summary, sort, export):
             if filter_func(el):
                 return el
         return default
-    
 
     def parse_time(j, tag='start', default='2000-01-01 00:00:00.00000'):
         if 'life' in j and j['life']:
@@ -119,7 +142,7 @@ def show(state, type, where, details, fields, summary, sort, export):
             j['duration'] = 'none'
     if sort:
         def key(j):
-            val = db.get_value(j, sort)
+            val = dict_format(j, sort)
             if val and isinstance(val, float) and math.isnan(val):
                 return float('inf')
             return val
@@ -131,17 +154,19 @@ def show(state, type, where, details, fields, summary, sort, export):
         header = [fields.split(',')]
     else:
         header = []
+
+    if export:
+        for j in jobs:
+            fd = open(j['summary'] + '.json', 'w')
+            fd.write(json.dumps(j['content'], indent=2))
+            fd.close()
+
     jobs = map(format_job, jobs)
     if fields != '':
         print(tabulate(header + jobs))
     else:
         for j in jobs:
             print(j)
-    if export:
-        for j in jobs:
-            fd = open(j['summary'] + '.json', 'w')
-            fd.write(json.dumps(j['content'], indent=4))
-            fd.close()
 
 
 @click.command()
@@ -174,15 +199,21 @@ def delete(dryrun, jobs):
         if dryrun is False:
             db.delete({'summary': job})
 
-
 @click.command()
 def ipython():
     from IPython import embed
     db = load_db() #NOQA
     embed()
 
-
 def load_db(folder=None):
+    if folder is None:
+        folder = get_dotfolder()
+    params = get_db_params(folder=folder)
+    db = DB(**params)
+    db.load(folder)
+    return db
+
+def get_db_params(folder=None):
     if folder is None:
         folder = get_dotfolder()
     rcfilename = os.path.join(folder, '.lightjobrc')
@@ -190,10 +221,8 @@ def load_db(folder=None):
         params = json.load(open(rcfilename))
     else:
         params = {}
-    db = DB(**params)
-    db.load(folder)
-    return db
-
+    return params
+ 
 
 def get_dotfolder():
     folder = backward_search(os.getcwd(), DOTDIR)
@@ -206,3 +235,4 @@ main.add_command(init)
 main.add_command(ipython)
 main.add_command(update)
 main.add_command(delete)
+main.add_command(dump)
