@@ -64,13 +64,14 @@ def dump(filename):
 @click.option('--summary', default='', help='show a specific job', required=False)
 @click.option('--sort', default='', help='sort by some field or time', required=False)
 @click.option('--export/--no-export', default=False, help='export to json', required=False)
-def show(state, type, where, details, fields, summary, sort, export): 
+@click.option('--ascending/--descending', default=True, help='orde of showing the sorted events', required=False)
+def show(state, type, where, details, fields, summary, sort, export, ascending): 
     try:
         from tabulate import tabulate
     except ImportError:
         tabulate = lambda x:x
     import pprint
-
+    from joblib import Memory
     db = load_db()
     params = get_db_params()
     if 'dict_format' in params:
@@ -83,21 +84,21 @@ def show(state, type, where, details, fields, summary, sort, export):
     else:
         dict_format = default_dict_format
 
-    if details:
-        if fields:
-            def format_job(j):
-                vals = []
-                for field in fields.split(','):
-                    try:
-                        val = dict_format(j, field)
-                    except ValueError:
-                        val = None
-                    vals.append(val)
-                return map(str, vals)
-        else: 
-            format_job = lambda j:pprint.pformat(j, indent=2)
-    else:
-        format_job = lambda j:j['summary']
+    if fields:
+        def format_job(j):
+            vals = []
+            for field in fields.split(','):
+                try:
+                    val = dict_format(j, field, db=db)
+                except ValueError:
+                    val = 'not_found'
+                vals.append(val)
+            return map(str, vals)
+    else: 
+        if details:
+            format_job = lambda j:pprint.pprint(j, indent=4)
+        else:
+            format_job = lambda j:j['summary']
     kw = {}
     if summary:
         kw['summary'] = summary
@@ -141,11 +142,22 @@ def show(state, type, where, details, fields, summary, sort, export):
         except Exception:
             j['duration'] = 'none'
     if sort:
+        infty = float('inf') if ascending else -float('inf')
         def key(j):
-            val = dict_format(j, sort)
-            if val and isinstance(val, float) and math.isnan(val):
-                return float('inf')
-            return val
+            try:
+                val = dict_format(j, sort, db=db)
+            except Exception:
+                return infty
+            else:
+                if val and isinstance(val, float) and math.isnan(val):
+                    return infty
+                elif val and isinstance(val, str) or isinstance(val, unicode):
+                    return infty
+                else:
+                    return val
+        if not ascending:
+            key_ = key
+            key = lambda j:-key_(j)
         jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))

@@ -35,7 +35,7 @@ def recur_update(d, u):
     return d
 
 AGG = {'min': min, 'max': max, 'last': lambda l:l[-1], 'first':lambda l:l[0], 'sum':lambda l:sum(l)}
-def dict_format(dict, field, agg=AGG, if_not_found='raise_exception'):
+def dict_format(dict, field, agg=AGG, if_not_found='raise_exception', **kw):
     val = dict
     field_comps = field.split('.')
     found = True

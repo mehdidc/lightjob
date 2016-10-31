@@ -121,7 +121,7 @@ class GenericDB(object):
                 yield {field: value, 'job': j}
 
     def get_value(self, job, field, dict_format=dict_format, **kw):
-        return dict_format(job, field, **kw)
+        return dict_format(job, field, db=self, **kw)
 
     def job_exists_by_summary(self, s):
         return True if self.get_by_id(s) is not None else False
@@ -132,11 +132,15 @@ class GenericDB(object):
     def close(self):
         self.db.close()
 
+def cached(db, cache_decorator):
+    cached_methods = ['get', 'get_by_id', 'get_values', 'get_value', 'job_exists_by_summary', 'jobs_with', 'get_job_by_summary']
+    for method in cached_methods:
+        setattr(db, method, cache_decorator(getattr(db, method)))
+    return db
 
 class Job(Document):
     class Meta(Document.Meta):
         primary_key = IDKEY # TODO should depend on self.idkey
-
 
 class Blitz(GenericDB):
 
