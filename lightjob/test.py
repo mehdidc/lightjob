@@ -1,9 +1,11 @@
-import os, shutil
-from lightjob.db import DB, AVAILABLE, SUCCESS, RUNNING, ERROR
-from lightjob.utils import summarize
-from db import Blitz, Dataset, H5py
+import os
+import shutil
 from tempfile import mkdtemp
 
+from lightjob.db import DB
+from lightjob.db import AVAILABLE, SUCCESS, RUNNING, ERROR
+from lightjob.db import Blitz, Dataset, H5py
+from lightjob.utils import summarize
 
 class BaseTest(object):
 
@@ -52,7 +54,7 @@ class BaseTest(object):
         self.db.add_job(d, x=1, y=2)
         d = {'a': 2, 'b': 4}
         self.db.add_job(d, x=3, y=2)
-        jobs = self.db.jobs_with(x=1)
+        jobs = list(self.db.jobs_with(x=1))
         assert len(jobs) == 2
 
     def test_safe_add(self):
@@ -71,8 +73,6 @@ def with_backend(cls, backend):
 TestBlitz = with_backend(BaseTest, backend=Blitz)
 TestDataset = with_backend(BaseTest, backend=Dataset)
 TestH5py = with_backend(BaseTest, backend=H5py)
-
-
 
 if __name__ == '__main__':
     pass

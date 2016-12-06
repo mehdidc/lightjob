@@ -65,7 +65,8 @@ def dump(filename):
 @click.option('--sort', default='', help='sort by some field or time', required=False)
 @click.option('--export/--no-export', default=False, help='export to json', required=False)
 @click.option('--ascending/--descending', default=True, help='orde of showing the sorted events', required=False)
-def show(state, type, where, details, fields, summary, sort, export, ascending): 
+@click.option('--show-fields/--no-show-fields', default=True, help='orde of showing the sorted events', required=False)
+def show(state, type, where, details, fields, summary, sort, export, ascending, show_fields): 
     try:
         from tabulate import tabulate
     except ImportError:
@@ -93,7 +94,12 @@ def show(state, type, where, details, fields, summary, sort, export, ascending):
                 except ValueError:
                     val = 'not_found'
                 vals.append(val)
-            return map(str, vals)
+                j[field] = val
+            if show_fields:
+                return map(str, vals)
+            else:
+                return pprint.pprint(j, indent=4)
+            
     else: 
         if details:
             format_job = lambda j:pprint.pprint(j, indent=4)
@@ -174,7 +180,7 @@ def show(state, type, where, details, fields, summary, sort, export, ascending):
             fd.close()
 
     jobs = map(format_job, jobs)
-    if fields != '':
+    if fields != '' and show_fields:
         print(tabulate(header + jobs))
     else:
         for j in jobs:

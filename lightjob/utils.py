@@ -26,7 +26,7 @@ def summarize(d):
 
 #http://stackoverflow.com/a/3233356
 def recur_update(d, u):
-    for k, v in u.iteritems():
+    for k, v in u.items():
         if isinstance(v, collections.Mapping):
             r = recur_update(d.get(k, {}), v)
             d[k] = r

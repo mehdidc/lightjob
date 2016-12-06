@@ -3,11 +3,12 @@ import os
 from blitzdb import Document, FileBackend
 import h5py
 import dataset
-from utils import summarize, recur_update, dict_format, match, flatten_dict
 import logging
 from datetime import datetime
 import json
 import collections
+
+from .utils import summarize, recur_update, dict_format, match, flatten_dict
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
