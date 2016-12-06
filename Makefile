@@ -9,4 +9,4 @@ clean:
 	$(PYTHON) setup.py clean
 
 test: inplace
-	nosetests --with-coverage -v
+	nosetests --with-coverage --cover-package=lightjob -v

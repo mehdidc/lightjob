@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import collections
+import six
 
 def mkdir_path(path):
     if not os.access(path, os.F_OK):
@@ -21,7 +22,7 @@ def get_parent_directory(path):
 def summarize(d):
     s = json.dumps(d, sort_keys=True)
     m = hashlib.md5()
-    m.update(s)
+    m.update(six.b(s))
     return m.hexdigest()
 
 #http://stackoverflow.com/a/3233356
