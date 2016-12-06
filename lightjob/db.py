@@ -1,35 +1,36 @@
 import sys
 import os
-from blitzdb import Document, FileBackend
-import h5py
-import dataset
-import logging
 from datetime import datetime
 import json
 import collections
 
+from blitzdb import Document, FileBackend
+import dataset
+import h5py
+
 from .utils import summarize, recur_update, dict_format, match, flatten_dict
 
-logger = logging.getLogger(__name__)
-handler = logging.StreamHandler(stream=sys.stdout)
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-
-DBFILENAME = "db.json"
-STATES = AVAILABLE, RUNNING, SUCCESS, ERROR, PENDING, DELETED = "available", "running", "success", "error", "pending", "deleted"
+DBFILENAME = 'db.json'
+STATES = AVAILABLE, RUNNING, SUCCESS, ERROR, PENDING, DELETED = 'available', 'running', 'success', 'error', 'pending', 'deleted'
 IDKEY = 'summary'
+CONTENTKEY = 'content'
+STATEKEY = 'state'
+LIFEKEY = 'life'
 
 class GenericDB(object):
 
-    def __init__(self, **kw):
-        self.loaded = False
-
-    def load(self, filename, idkey=IDKEY):
-        assert self.loaded is False, "Already loaded"
-        self.load_from_dir(filename)
+    def __init__(self, summarize=summarize, idkey=IDKEY, contentkey=CONTENTKEY, statekey=STATEKEY, lifekey=LIFEKEY, dict_format=dict_format):
+        self.summarize = summarize
         self.idkey = idkey
+        self.contentkey = contentkey
+        self.statekey = statekey
+        self.lifekey = lifekey
+        self.dict_format = dict_format
 
-    def load_from_dir(self, filename):
+    def load(self, dirname):
+        self.load_from_dir(dirname)
+
+    def load_from_dir(self, dirname):
         raise NotImplementedError()
 
     def insert_list(self, l):
@@ -55,7 +56,6 @@ class GenericDB(object):
 
     def safe_add_job(self, d, **kw):
         if self.job_exists(d):
-            logger.error("Error during adding Job {} : it already exists, canceling.".format(summarize(d)))
             return 0
         self.add_job(d, **kw)
         return 1
@@ -64,21 +64,23 @@ class GenericDB(object):
         if self.job_exists(d):
             u = {}
             u.update(kw)
-            u['content'] = d
-            s = summarize(d)
+            u[self.contentkey] = d
+            s = self.summarize(d)
             self.job_update(s, u)
             return 0
         self.add_job(d, **kw)
         return 1
 
     def add_job(self, d, state=AVAILABLE, **meta):
-        s = summarize(d)
-        self.insert(dict(state=state, content=d, summary=s, life=[], **meta))
+        s = self.summarize(d)
+        D = {self.statekey: state, self.contentkey: d, self.idkey: s, self.lifekey: []}
+        D.update(meta)
+        self.insert(D)
         self.modify_state_of(s, state)
         return s
 
     def all_jobs(self):
-        return self.get(dict())
+        return self.get({})
 
     def jobs_with(self, **kw):
         return self.get(kw)
@@ -87,25 +89,25 @@ class GenericDB(object):
         return filter(fn, self.get(kw))
 
     def jobs_with_state(self, state):
-        return self.get(dict(state=state))
+        return self.get({self.statekey: state})
 
     def get_state_of(self, summary):
-        return self.get_job_by_summary(summary)["state"]
+        return self.get_job_by_summary(summary)[self.statekey]
 
     def modify_state_of(self, summary, state, dt=None):
-        self.update(dict(state=state), summary)
+        self.update({self.statekey: state}, summary)
         if dt is None:
             dt = datetime.now()
         j = self.get_job_by_summary(summary)
-        if "life" in j:
-            life = j["life"]
+        if self.lifekey in j:
+            life = j[self.lifekey]
         else:
             life = []
-        life.append(dict(state=state, dt=dt))
-        self.update(dict(life=life), summary)
+        life.append({self.statekey: state, 'dt': dt})
+        self.update({self.lifekey: life}, summary)
 
     def job_exists(self, d):
-        return self.job_exists_by_summary(summarize(d))
+        return self.job_exists_by_summary(self.summarize(d))
 
     def job_update(self, s, values):
         self.update(values, s)
@@ -113,7 +115,7 @@ class GenericDB(object):
     def get_values(self, field, **kw):
         jobs = self.jobs_with(**kw)
         for j in jobs:
-            s = j['summary']
+            s = j[self.idkey]
             try:
                 value = self.get_value(j, field)
             except ValueError:
@@ -133,20 +135,14 @@ class GenericDB(object):
     def close(self):
         self.db.close()
 
-def cached(db, cache_decorator):
-    cached_methods = ['get', 'get_by_id', 'get_values', 'get_value', 'job_exists_by_summary', 'jobs_with', 'get_job_by_summary']
-    for method in cached_methods:
-        setattr(db, method, cache_decorator(getattr(db, method)))
-    return db
-
 class Job(Document):
     class Meta(Document.Meta):
         primary_key = IDKEY # TODO should depend on self.idkey
 
 class Blitz(GenericDB):
 
-    def load_from_dir(self, filename):
-        self.db = FileBackend(os.path.join(filename, DBFILENAME))
+    def load_from_dir(self, dirname):
+        self.db = FileBackend(os.path.join(dirname, DBFILENAME))
 
     def insert(self, d):
         self.insert_list([d])
@@ -180,13 +176,12 @@ class Blitz(GenericDB):
             return False
 
     def close(self):
-        self.loaded = False
-
+        pass
 
 class Dataset(GenericDB):
 
-    def load_from_dir(self, filename):
-        filename = 'sqlite:///{}/db'.format(filename)
+    def load_from_dir(self, dirname):
+        filename = 'sqlite:///{}/db'.format(dirname)
         self.db = dataset.connect(filename)
         self.table = self.db['table']
 
@@ -238,7 +233,7 @@ class Dataset(GenericDB):
         self.table.update(d, [self.idkey])
 
     def close(self):
-        self.loaded = False
+        pass
 
 def date_handler(obj):
     if hasattr(obj, 'isoformat'):
@@ -246,14 +241,13 @@ def date_handler(obj):
     else:
         raise TypeError
 
-
 class H5py(GenericDB):
 
-    def load_from_dir(self, filename):
-        self.db  = h5py.File(filename + 'db.hdf5')
+    def load_from_dir(self, dirname):
+        self.db = h5py.File(os.path.join(dirname, 'db.hdf5'))
 
     def insert(self, d):
-        self.db.attrs[d['summary']] = json.dumps(d, default=date_handler)
+        self.db.attrs[d[self.idkey]] = json.dumps(d, default=date_handler)
 
     def insert_list(self, l):
         for j in l:
@@ -264,7 +258,7 @@ class H5py(GenericDB):
         return json.loads(d) if d else None
 
     def delete(self, d):
-        del self.db.attrs[d['summary']]
+        del self.db.attrs[d[self.idkey]]
 
     def get(self, d):
         o = map(json.loads, self.db.attrs.values())
@@ -281,7 +275,6 @@ class H5py(GenericDB):
             return False
 
     def close(self):
-        self.loaded = False
         self.db.close()
 
 def DB(backend=Blitz, **kw):
