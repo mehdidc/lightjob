@@ -1,0 +1,4 @@
+blitzdb
+dataset
+h5py
+six

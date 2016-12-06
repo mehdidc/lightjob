@@ -3,6 +3,7 @@ import os
 from datetime import datetime
 import json
 import collections
+import six
 
 from blitzdb import Document, FileBackend
 import dataset
@@ -278,6 +279,6 @@ class H5py(GenericDB):
         self.db.close()
 
 def DB(backend=Blitz, **kw):
-    if type(backend) in (str, unicode):
+    if isinstance(backend, six.string_types):
         backend = {'Blitz': Blitz, 'Dataset': Dataset, 'H5py': H5py}.get(backend, Blitz)
     return backend(**kw)
