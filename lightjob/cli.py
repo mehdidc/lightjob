@@ -6,6 +6,7 @@ import json
 import math
 from dateutil import parser
 import importlib
+import six
 
 from .db import DB
 from .utils import mkdir_path
@@ -19,17 +20,18 @@ logger.setLevel(logging.INFO)
 
 DOTDIR = ".lightjob"
 
-
 @click.group()
 def main():
     pass
 
-
 @click.command()
-@click.option('--force', default=False, help='Force init if exists', required=False)
-@click.option('--purge', default=False, help='Force purge database (WARNING : dangerous!)', required=False)
+@click.option('--force/--no-force', default=False, help='Force init if exists', required=False)
+@click.option('--purge/--no-purge', default=False, help='Force purge database (WARNING : dangerous!)', required=False)
 @click.option('--backend', default='Blitz', help='Blitz/Dataset/H5py', required=False)
 def init(force, purge, backend):
+    """
+    initializes a db in the current directory
+    """
     folder = './{}'.format(DOTDIR)
     if os.path.exists(folder):
         if not force:
@@ -46,8 +48,11 @@ def init(force, purge, backend):
         db.purge()
 
 @click.command()
-@click.option('--filename', default='db.json', help='filename', required=False)
+@click.option('--filename', default='db.json', help='json filename where to dump the db', required=False)
 def dump(filename):
+    """
+    dump the db into a json file
+    """
     db = load_db()
     kw = {}
     jobs = db.jobs_with(**kw)
@@ -56,23 +61,24 @@ def dump(filename):
         json.dump(jobs, fd, indent=2)
 
 @click.command()
-@click.option('--state', default=None, help='state', required=False)
-@click.option('--type', default=None, help='type', required=False)
-@click.option('--where', default=None, help='where', required=False)
+@click.option('--state', default=None, help='filter jobs by state', required=False)
+@click.option('--type', default=None, help='fitler jobs by type', required=False)
+@click.option('--where', default=None, help='filter jobs by where', required=False)
 @click.option('--details/--no-details', default=False, help='show with details', required=False)
 @click.option('--fields', default='', help='show values of fields separated by comma', required=False)
-@click.option('--summary', default='', help='show a specific job', required=False)
-@click.option('--sort', default='', help='sort by some field or time', required=False)
-@click.option('--export/--no-export', default=False, help='export to json', required=False)
+@click.option('--summary', default='', help='show a specific job by its id', required=False)
+@click.option('--sort', default='', help='sort the jobs by some field', required=False)
 @click.option('--ascending/--descending', default=True, help='orde of showing the sorted events', required=False)
 @click.option('--show-fields/--no-show-fields', default=True, help='orde of showing the sorted events', required=False)
-def show(state, type, where, details, fields, summary, sort, export, ascending, show_fields):
+def show(state, type, where, details, fields, summary, sort, ascending, show_fields):
+    """
+    show the content of the db
+    """
     try:
         from tabulate import tabulate
     except ImportError:
         tabulate = lambda x:x
     import pprint
-    from joblib import Memory
     db = load_db()
     params = get_db_params()
     if 'dict_format' in params:
@@ -157,7 +163,7 @@ def show(state, type, where, details, fields, summary, sort, export, ascending, 
             else:
                 if val and isinstance(val, float) and math.isnan(val):
                     return infty
-                elif val and isinstance(val, str) or isinstance(val, unicode):
+                elif isinstance(val, six.string_type):
                     return infty
                 else:
                     return val
@@ -173,12 +179,6 @@ def show(state, type, where, details, fields, summary, sort, export, ascending, 
     else:
         header = []
 
-    if export:
-        for j in jobs:
-            fd = open(j['summary'] + '.json', 'w')
-            fd.write(json.dumps(j['content'], indent=2))
-            fd.close()
-
     jobs = map(format_job, jobs)
     if fields != '' and show_fields:
         print(tabulate(header + jobs))
@@ -186,13 +186,15 @@ def show(state, type, where, details, fields, summary, sort, export, ascending, 
         for j in jobs:
             print(j)
 
-
 @click.command()
-@click.option('--state', help='state', required=True)
-@click.option('--details', help='details', required=False, type=bool, default=True)
-@click.option('--dryrun', help='dry run', required=True, type=bool)
+@click.option('--state', help='new state of the job', required=True)
+@click.option('--details', help='verbose to see details of the job being updated', required=False, type=bool, default=True)
+@click.option('--dryrun/--no-dryrun', help='dry run', required=True)
 @click.argument('jobs', nargs=-1, required=True)
 def update(state, details, dryrun, jobs):
+    """
+    update the content of the db
+    """
     db = load_db()
     for job in jobs:
         print(job)
@@ -208,9 +210,12 @@ def update(state, details, dryrun, jobs):
 
 
 @click.command()
-@click.option('--dryrun', help='dry run', required=True, type=bool)
+@click.option('--dryrun/--no-dryrun', help='dry run', required=True)
 @click.argument('jobs', nargs=-1, required=True)
 def delete(dryrun, jobs):
+    """
+    delete a list of jobs from the db.
+    """
     db = load_db()
     for job in jobs:
         print(job)
@@ -219,11 +224,19 @@ def delete(dryrun, jobs):
 
 @click.command()
 def ipython():
+    """
+    launches ipython with the object 'db' loaded
+    """
     from IPython import embed
     db = load_db() #NOQA
     embed()
 
 def load_db(folder=None):
+    """
+    Load a db located the folder 'folder'.
+    if 'folder' is not provided, get_dotfolder() is used to get the
+    db folder.
+    """
     if folder is None:
         folder = get_dotfolder()
     params = get_db_params(folder=folder)
@@ -232,6 +245,11 @@ def load_db(folder=None):
     return db
 
 def get_db_params(folder=None):
+    """
+    get the db params from the db located in folder.
+    if 'folder' is not provided, get_dotfolder() is used to get the
+    db folder.
+    """
     if folder is None:
         folder = get_dotfolder()
     rcfilename = os.path.join(folder, '.lightjobrc')
@@ -243,6 +261,13 @@ def get_db_params(folder=None):
 
 
 def get_dotfolder():
+    """
+    searches a db folder starting from the current directory
+    the algo is recursive, a la git:
+        - if a db repo exists in the current folder, use it
+        - if no db exists in the current folder, go to the parent folder
+        - repeat
+    """
     folder = backward_search(os.getcwd(), DOTDIR)
     if folder is None:
         folder = os.path.join(os.getcwd(), DOTDIR)
