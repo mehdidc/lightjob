@@ -1,10 +1,9 @@
-import os
 import shutil
 from tempfile import mkdtemp
 
 from lightjob.db import DB
 from lightjob.db import AVAILABLE, SUCCESS, RUNNING, ERROR
-from lightjob.db import Blitz, Dataset, H5py
+from lightjob.databases import Blitz, Dataset, H5py
 from lightjob.utils import summarize
 
 class BaseTest(object):

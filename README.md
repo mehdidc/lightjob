@@ -1,6 +1,6 @@
 # Lightjob
 
-a lightweight job manager using a server-less json database (blitzdb)
+a lightweight job manager using a server-less json database
 
 ## install
 
