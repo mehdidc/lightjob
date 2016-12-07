@@ -249,6 +249,13 @@ def get_db_params(folder=None):
     get the db params from the db located in folder.
     if 'folder' is not provided, get_dotfolder() is used to get the
     db folder.
+    the db config is located in /path/DOTDIR/.lightjobrc
+    the db config is a json file.
+    it supports two options, 'backend' and 'dict_format'.
+    - 'backend' is required, it is the name of the backend used by the db.
+    - 'dict_format' is optional. it is the name of the function to use
+       as dict_format in the command 'show' of the cli. dict_format is used
+       by the cli to get a field from a job.
     """
     if folder is None:
         folder = get_dotfolder()
@@ -264,7 +271,8 @@ def get_dotfolder():
     """
     searches a db folder starting from the current directory
     the algo is recursive, a la git:
-        - if a db repo exists in the current folder, use it
+        - if a db repo exists in the current folder (meaning DOTDIR exists in teh current folder)
+          use it
         - if no db exists in the current folder, go to the parent folder
         - repeat
     """
