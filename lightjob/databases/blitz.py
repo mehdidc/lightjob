@@ -1,14 +1,13 @@
 import os
-import sys
 
 from blitzdb import Document
 from blitzdb import FileBackend
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
-from db import IDKEY
-from db import DBFILENAME
-from utils import recur_update
+from ..db import IDKEY
+from ..db import DBFILENAME
+from ..utils import recur_update
 
 from .base import GenericDB
 

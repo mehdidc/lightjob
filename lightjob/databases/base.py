@@ -1,11 +1,9 @@
-import os
-import sys
 from datetime import datetime
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from db import IDKEY, CONTENTKEY, STATEKEY, LIFEKEY, AVAILABLE
-from utils import summarize
-from utils import dict_format
+#sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from ..db import IDKEY, CONTENTKEY, STATEKEY, LIFEKEY, AVAILABLE
+from ..utils import summarize
+from ..utils import dict_format
 
 class GenericDB(object):
 
