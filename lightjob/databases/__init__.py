@@ -1,3 +1,3 @@
 from .blitz import Blitz
-from .dataset import Dataset
+from .datasetdb import Dataset
 from .h5 import H5py
