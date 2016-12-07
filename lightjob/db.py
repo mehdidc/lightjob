@@ -10,6 +10,6 @@ LIFEKEY = 'life'
 
 def DB(backend='Blitz', **kw):
     if isinstance(backend, six.string_types):
-        module = importlib.import_module('databases')
+        module = importlib.import_module('.databases', 'lightjob')
         backend = getattr(module, backend)
     return backend(**kw)

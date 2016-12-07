@@ -1,16 +1,16 @@
 import sys
 import os
 import click
-from utils import mkdir_path, backward_search
-from utils import dict_format as default_dict_format
-from db import DB
 import logging
 import json
-import pandas as pd
-from dateutil import parser
 import math
-
+from dateutil import parser
 import importlib
+
+from .db import DB
+from .utils import mkdir_path
+from .utils import backward_search
+from .utils import dict_format as default_dict_format
 
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
@@ -66,7 +66,7 @@ def dump(filename):
 @click.option('--export/--no-export', default=False, help='export to json', required=False)
 @click.option('--ascending/--descending', default=True, help='orde of showing the sorted events', required=False)
 @click.option('--show-fields/--no-show-fields', default=True, help='orde of showing the sorted events', required=False)
-def show(state, type, where, details, fields, summary, sort, export, ascending, show_fields): 
+def show(state, type, where, details, fields, summary, sort, export, ascending, show_fields):
     try:
         from tabulate import tabulate
     except ImportError:
@@ -99,8 +99,8 @@ def show(state, type, where, details, fields, summary, sort, export, ascending, 
                 return map(str, vals)
             else:
                 return pprint.pprint(j, indent=4)
-            
-    else: 
+
+    else:
         if details:
             format_job = lambda j:pprint.pprint(j, indent=4)
         else:
@@ -167,7 +167,7 @@ def show(state, type, where, details, fields, summary, sort, export, ascending, 
         jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
-    
+
     if fields != '':
         header = [fields.split(',')]
     else:
@@ -240,7 +240,7 @@ def get_db_params(folder=None):
     else:
         params = {}
     return params
- 
+
 
 def get_dotfolder():
     folder = backward_search(os.getcwd(), DOTDIR)
