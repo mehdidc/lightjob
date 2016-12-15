@@ -163,7 +163,7 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
             else:
                 if val and isinstance(val, float) and math.isnan(val):
                     return infty
-                elif isinstance(val, six.string_type):
+                elif isinstance(val, six.string_types):
                     return infty
                 else:
                     return val
