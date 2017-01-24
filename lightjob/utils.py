@@ -4,6 +4,7 @@ import hashlib
 import collections
 import six
 
+
 def mkdir_path(path):
     """
     silent mkdir of a path if the path does not exist.
@@ -12,6 +13,7 @@ def mkdir_path(path):
     """
     if not os.access(path, os.F_OK):
         os.makedirs(path)
+
 
 def backward_search(path, filename):
     """
@@ -43,8 +45,10 @@ def backward_search(path, filename):
     else:
         return backward_search(get_parent_directory(path), filename)
 
+
 def get_parent_directory(path):
     return os.path.dirname(os.path.normpath(path))
+
 
 def summarize(d):
     """
@@ -56,7 +60,9 @@ def summarize(d):
     m.update(six.b(s))
     return m.hexdigest()
 
-#http://stackoverflow.com/a/3233356
+# http://stackoverflow.com/a/3233356
+
+
 def recur_update(d, u):
     """
     update a dictionary `d` with another dictionary `u`
@@ -83,7 +89,10 @@ def recur_update(d, u):
             d[k] = u[k]
     return d
 
-AGG = {'min': min, 'max': max, 'last': lambda l:l[-1], 'first':lambda l:l[0], 'sum':lambda l:sum(l)}
+AGG = {'min': min, 'max': max, 'last': lambda l: l[-1],
+       'first': lambda l: l[0], 'sum': lambda l: sum(l)}
+
+
 def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
     """
     get a field from a dictionary.
@@ -115,7 +124,7 @@ def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
             comp, agg_name = comp.split(':', 2)
             agg = agg_name[agg_name]
         else:
-            agg = lambda x:x
+            agg = lambda x: x
         if not val or (val and comp not in val):
             found = False
             break
@@ -128,6 +137,7 @@ def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
             raise ValueError('field {} does not exist'.format(field))
         else:
             return if_not_found
+
 
 def match(d, d_ref):
     """
@@ -146,6 +156,7 @@ def match(d, d_ref):
         if k in d_ref and d_ref[k] != v:
             return False
     return True
+
 
 def flatten_dict(l):
     """

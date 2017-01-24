@@ -1,7 +1,8 @@
 import dataset
 import json
 
-from .base import  GenericDB
+from .base import GenericDB
+
 
 class Dataset(GenericDB):
 
@@ -59,6 +60,7 @@ class Dataset(GenericDB):
 
     def close(self):
         pass
+
 
 def date_handler(obj):
     if hasattr(obj, 'isoformat'):

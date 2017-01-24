@@ -9,9 +9,12 @@ from ..utils import recur_update
 
 from .base import GenericDB
 
+
 class Job(Document):
+
     class Meta(Document.Meta):
-        primary_key = IDKEY # TODO should depend on self.idkey
+        primary_key = IDKEY  # TODO should depend on self.idkey
+
 
 class Blitz(GenericDB):
 

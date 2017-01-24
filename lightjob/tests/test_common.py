@@ -6,6 +6,7 @@ from lightjob.db import AVAILABLE, SUCCESS, RUNNING, ERROR
 from lightjob.databases import Blitz, Dataset, H5py
 from lightjob.utils import summarize
 
+
 class BaseTest(object):
 
     def setUp(self):
@@ -68,6 +69,7 @@ def with_backend(cls, backend):
     C.__name__ = 'Test' + str(backend)
     C.backend = backend
     return C
+
 
 TestBlitz = with_backend(BaseTest, backend=Blitz)
 TestDataset = with_backend(BaseTest, backend=Dataset)

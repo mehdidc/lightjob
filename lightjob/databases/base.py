@@ -4,9 +4,45 @@ from ..db import IDKEY, CONTENTKEY, STATEKEY, LIFEKEY, AVAILABLE
 from ..utils import summarize
 from ..utils import dict_format
 
+
 class GenericDB(object):
     """
     base class for databases.
+    a job is a dict stored in a database.
+    the database consists in a set of jobs.
+    Each job is identified by a key, called here "summary".
+    It is called summary because it is computed based the content
+    of the job using a hash function.
+    The purpose of doing that is to detect duplicates, so that
+    we don't insert any existing job.
+    Jobs have also a meta part which does not affect the value of
+    summary (the hash is only computed based on the
+    content when the job is inserted for the first time).
+    The structure of the dict of a job is like the following:
+
+    {
+        "content": ...,
+        "meta1": "meta1_value",
+        "meta2": "meta2_value",
+        "meta1": "meta1_value",
+        "summary": "hash of content",
+        "state": "state of job",
+        "life": [  {"state": state, "dt": time}, {"state": state, "dt": time}, ... ]
+    }
+
+    the content part can anything jsonable (so list or dict or combinations).
+    the meta values can  also anyhting jsonable (so list or dict or combinations).
+    Three other basic meta values are defined for any job : summary, state, life.
+
+    - summary is the hash of the content (md5 by default, see utils.summarize)
+    - state is the current state of the job, can be :
+        'available', 'running', 'success', 'error', 'pending', 'deleted'.
+    - life is describing the evolution of the states that the job took
+      through time until now. It is a list of dicts, where each dict has
+      two keys : self.statekey (by default "state") and "dt", the value of
+      self.statekey in the dict is the state and "dt" is the time when it changed
+      to that state. life[-1]['state'] should be the same than value of the job
+      'state'.
 
     Parameters
     ----------
@@ -28,19 +64,18 @@ class GenericDB(object):
     dict_format : callable, optional[default=utils.dict_format]
         SHOULD REMOVE THIS
     """
+
     def __init__(self,
                  summarize=summarize,
                  idkey=IDKEY,
                  contentkey=CONTENTKEY,
                  statekey=STATEKEY,
-                 lifekey=LIFEKEY,
-                 dict_format=dict_format):
+                 lifekey=LIFEKEY):
         self.summarize = summarize
         self.idkey = idkey
         self.contentkey = contentkey
         self.statekey = statekey
         self.lifekey = lifekey
-        self.dict_format = dict_format #TODO remove dict_format from __init__
 
     def load(self, dirname):
         """
@@ -217,7 +252,16 @@ class GenericDB(object):
         `meta` fields are all fields that do not define
         the content of the job (don't affect the hash of the
         content (computed by `summarize`) of the job which defines
-        its identity).
+        its identity), whereas `d` is the content of the job.
+        The structure of the newly inserted job dict will then be:
+
+        {
+            "content": d,
+            "summary": hash of d,
+            "state": state,
+            "life": [  {"state": state, "dt": now} ]
+            **meta
+        }
 
         Parameters
         ----------
@@ -239,12 +283,12 @@ class GenericDB(object):
 
     def all_jobs(self):
         """
-        roundeturn all jobs
+        Return all jobs
 
         Returns
         -------
 
-        iterator of dicts
+        iterable of dicts
 
         """
         return self.get({})
@@ -253,6 +297,11 @@ class GenericDB(object):
         """
         Return all jobs that match the fields defined in
         the kwargs
+
+        Returns
+        -------
+
+        iterable of dicts
         """
         return self.get(kw)
 
@@ -272,7 +321,7 @@ class GenericDB(object):
         Returns
         -------
 
-        iterator of dicts
+        iterable of dicts
         """
         return filter(fn, self.get(kw))
 
@@ -288,17 +337,17 @@ class GenericDB(object):
         Returns
         -------
 
-        iterator of dicts
+        iterable of dicts
         """
         return self.get({self.statekey: state})
 
     def get_state_of(self, summary):
-        """ get the state of a job for which the `id` is `summary`. """
+        """ get the state of a job for which the summary is `summary`. """
         return self.get_job_by_summary(summary)[self.statekey]
 
     def modify_state_of(self, summary, state, dt=None):
         """
-        Modify the state of the job for which the `id` is `summary`.
+        Modify the state of the job for which the summary is `summary`.
 
         Parameters
         ----------
@@ -324,7 +373,9 @@ class GenericDB(object):
 
     def job_update(self, s, values):
         """
-        update a job
+        update a job meta values.
+        WARNING: job_update only concerns meta fields, the content of a job is not meant
+        to be changed because the summary is not coherent anymore if the content is changed.
 
         Parameters
         ----------
@@ -332,14 +383,14 @@ class GenericDB(object):
         s : str
             id of the job to update
         values : dict
-            fields to update
+            fields to update.
         """
         self.update(values, s)
 
     def get_values(self, field, **meta):
         """
         get the values of a field for all the jobs matching
-        the meta fields (if provided, otherwies use all
+        the meta fields (if meta fields are provided, otherwise use all
         the jobs)
 
         Parameters
@@ -381,12 +432,12 @@ class GenericDB(object):
         return self.job_exists_by_summary(self.summarize(d))
 
     def job_exists_by_summary(self, s):
-        """ return True if the job with the `id` defined by `s` exists"""
+        """ return True if the job with the summary defined by `s` exists"""
         return True if self.get_by_id(s) is not None else False
 
     def get_job_by_summary(self, s):
         """
-        returns the content of a job based on its `id` defined by `s`
+        returns the content of a job for which the summary is equal to `s`
 
         Parameters
         ----------
@@ -396,7 +447,7 @@ class GenericDB(object):
 
         Returns
         -------
-        
+
         dict : content of the job
         """
         return self.get_by_id(s)

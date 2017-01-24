@@ -13,6 +13,13 @@ from .utils import mkdir_path
 from .utils import backward_search
 from .utils import dict_format as default_dict_format
 
+try:
+    from tabulate import tabulate
+except ImportError:
+    def tabulate(x):
+        return x
+import pprint
+
 logger = logging.getLogger(__name__)
 handler = logging.StreamHandler(stream=sys.stdout)
 logger.addHandler(handler)
@@ -20,9 +27,11 @@ logger.setLevel(logging.INFO)
 
 DOTDIR = ".lightjob"
 
+
 @click.group()
 def main():
     pass
+
 
 @click.command()
 @click.option('--force/--no-force', default=False, help='Force init if exists', required=False)
@@ -47,6 +56,7 @@ def init(force, purge, backend):
     if purge:
         db.purge()
 
+
 @click.command()
 @click.option('--filename', default='db.json', help='json filename where to dump the db', required=False)
 def dump(filename):
@@ -59,6 +69,7 @@ def dump(filename):
     jobs = list(jobs)
     with open(filename, 'w') as fd:
         json.dump(jobs, fd, indent=2)
+
 
 @click.command()
 @click.option('--state', default=None, help='filter jobs by state', required=False)
@@ -74,11 +85,6 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
     """
     show the content of the db
     """
-    try:
-        from tabulate import tabulate
-    except ImportError:
-        tabulate = lambda x:x
-    import pprint
     db = load_db()
     params = get_db_params()
     if 'dict_format' in params:
@@ -108,9 +114,11 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
 
     else:
         if details:
-            format_job = lambda j:pprint.pprint(j, indent=4)
+            def format_job(j):
+                pprint.pprint(j, indent=4)
         else:
-            format_job = lambda j:j['summary']
+            def format_job(j):
+                return j['summary']
     kw = {}
     if summary:
         kw['summary'] = summary
@@ -132,10 +140,10 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
         if 'life' in j and j['life']:
             life = j['life']
             if tag == 'end':
-                moment = get_last(lambda l:l['state']=='success', life, default={'dt':default})
+                moment = get_last(lambda l: l['state'] == 'success', life, default={'dt': default})
                 dt = moment['dt']
             elif tag == 'start':
-                moment = get_last(lambda l:l['state']=='running', life, default={'dt': default})
+                moment = get_last(lambda l: l['state'] == 'running', life, default={'dt': default})
                 dt = moment['dt']
             else:
                 raise Exception('invalid tag : {}'.format(tag))
@@ -155,6 +163,7 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
             j['duration'] = 'none'
     if sort:
         infty = float('inf') if ascending else -float('inf')
+
         def key(j):
             try:
                 val = dict_format(j, sort, db=db)
@@ -169,7 +178,9 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
                     return val
         if not ascending:
             key_ = key
-            key = lambda j:-key_(j)
+
+            def key(j):
+                return -key_(j)
         jobs = sorted(jobs, key=key)
     if details:
         logger.info("Number of jobs : {}".format(len(jobs)))
@@ -186,12 +197,14 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
         for j in jobs:
             print(j)
 
+
 @click.command()
 @click.option('--state', help='new state of the job', required=True)
-@click.option('--details', help='verbose to see details of the job being updated', required=False, type=bool, default=True)
-@click.option('--dryrun/--no-dryrun', help='dry run', required=True)
+@click.option('--details', help='verbose to see details of the job being updated',
+              required=False, type=bool, default=True)
+@click.option('--force/--no-force', help='Force update', required=True)
 @click.argument('jobs', nargs=-1, required=True)
-def update(state, details, dryrun, jobs):
+def update(state, details, force, jobs):
     """
     update the content of the db
     """
@@ -203,24 +216,25 @@ def update(state, details, dryrun, jobs):
             print(j)
             print('')
         print("Previous state of {} : {}".format(job, j["state"]))
-        if dryrun is False:
+        if force:
             db.modify_state_of(job, state)
             print("{} updated".format(job))
             print("Previous state of {} : {}".format(job, state))
 
 
 @click.command()
-@click.option('--dryrun/--no-dryrun', help='dry run', required=True)
+@click.option('--force/--no-force', help='Force delete', required=True)
 @click.argument('jobs', nargs=-1, required=True)
-def delete(dryrun, jobs):
+def delete(force, jobs):
     """
     delete a list of jobs from the db.
     """
     db = load_db()
     for job in jobs:
         print(job)
-        if dryrun is False:
+        if force:
             db.delete({'summary': job})
+
 
 @click.command()
 def ipython():
@@ -228,8 +242,9 @@ def ipython():
     launches ipython with the object 'db' loaded
     """
     from IPython import embed
-    db = load_db() #NOQA
+    db = load_db()  # NOQA
     embed()
+
 
 def load_db(folder=None):
     """
@@ -243,6 +258,7 @@ def load_db(folder=None):
     db = DB(**params)
     db.load(folder)
     return db
+
 
 def get_db_params(folder=None):
     """
@@ -280,6 +296,7 @@ def get_dotfolder():
     if folder is None:
         folder = os.path.join(os.getcwd(), DOTDIR)
     return folder
+
 
 main.add_command(show)
 main.add_command(init)

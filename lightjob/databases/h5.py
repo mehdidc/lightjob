@@ -3,10 +3,11 @@ import json
 
 import h5py
 
-from .base import  GenericDB
+from .base import GenericDB
 
 from ..utils import recur_update
 from ..utils import match
+
 
 class H5py(GenericDB):
 
@@ -43,6 +44,7 @@ class H5py(GenericDB):
 
     def close(self):
         self.db.close()
+
 
 def date_handler(obj):
     if hasattr(obj, 'isoformat'):
