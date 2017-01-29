@@ -83,14 +83,14 @@ def dump(filename):
 @click.option('--sort', default='', help='sort the jobs by some field', required=False)
 @click.option('--ascending/--descending', default=True, help='orde of showing the sorted events', required=False)
 @click.option('--show-fields/--no-show-fields', default=True, help='orde of showing the sorted events', required=False)
-def show(state, type, where, details, fields, summary, sort, ascending, show_fields):
+@click.option('--dict-format', default='', help='dict format function to use', required=False)
+def show(state, type, where, details, fields, summary, sort, ascending, show_fields, dict_format):
     """
     show the content of the db
     """
     db = load_db()
     params = get_db_params()
-    if 'dict_format' in params:
-        dict_format = params['dict_format']
+    if dict_format:
         sys.path.append(os.getcwd())
         s = dict_format.split('.')
         module = '.'.join(s[0:-1])
