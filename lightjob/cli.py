@@ -4,6 +4,8 @@ import click
 import logging
 import json
 import math
+from six.moves import map
+
 from dateutil import parser
 import importlib
 import six
@@ -108,7 +110,7 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
                 vals.append(val)
                 j[field] = val
             if show_fields:
-                return map(str, vals)
+                return list(map(str, vals))
             else:
                 return pprint.pprint(j, indent=4)
 
@@ -190,7 +192,7 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
     else:
         header = []
 
-    jobs = map(format_job, jobs)
+    jobs = list(map(format_job, jobs))
     if fields != '' and show_fields:
         print(tabulate(header + jobs))
     else:
