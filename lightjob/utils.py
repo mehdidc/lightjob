@@ -89,8 +89,14 @@ def recur_update(d, u):
             d[k] = u[k]
     return d
 
-AGG = {'min': min, 'max': max, 'last': lambda l: l[-1],
-       'first': lambda l: l[0], 'sum': lambda l: sum(l)}
+AGG = {
+    'min': min, 
+    'max': max, 
+    'last': lambda l: l[-1],
+    'first': lambda l: l[0], 
+    'sum': lambda l: sum(l),
+    'len': len
+}
 
 
 def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
@@ -122,16 +128,16 @@ def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
     for comp in field_comps:
         if ':' in comp:
             comp, agg_name = comp.split(':', 2)
-            agg = agg_name[agg_name]
+            agg_ = agg[agg_name]
         else:
-            agg = lambda x: x
+            agg_ = lambda x: x
         if not val or (val and comp not in val):
             found = False
             break
         else:
             val = val[comp]
     if found:
-        return agg(val)
+        return agg_(val)
     else:
         if if_not_found == 'raise_exception':
             raise ValueError('field {} does not exist'.format(field))
