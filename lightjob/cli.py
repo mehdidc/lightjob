@@ -84,11 +84,12 @@ def dump(filename):
 @click.option('--ascending/--descending', default=True, help='orde of showing the sorted events', required=False)
 @click.option('--show-fields/--no-show-fields', default=True, help='orde of showing the sorted events', required=False)
 @click.option('--dict-format', default='', help='dict format function to use', required=False)
-def show(state, type, where, details, fields, summary, sort, ascending, show_fields, dict_format):
+@click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
+def show(state, type, where, details, fields, summary, sort, ascending, show_fields, dict_format, db_folder):
     """
     show the content of the db
     """
-    db = load_db()
+    db = load_db(db_folder)
     params = get_db_params()
     if dict_format:
         sys.path.append(os.getcwd())
@@ -206,11 +207,12 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
               required=False, type=bool, default=True)
 @click.option('--force/--no-force', help='Force update', required=True)
 @click.argument('jobs', nargs=-1, required=True)
-def update(state, details, force, jobs):
+@click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
+def update(state, details, force, jobs, db_folder):
     """
     update the content of the db
     """
-    db = load_db()
+    db = load_db(db_folder)
     for job in jobs:
         print(job)
         j = db.get_job_by_summary(job)
@@ -227,11 +229,12 @@ def update(state, details, force, jobs):
 @click.command()
 @click.option('--force/--no-force', help='Force delete', required=True)
 @click.argument('jobs', nargs=-1, required=True)
+@click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
 def delete(force, jobs):
     """
     delete a list of jobs from the db.
     """
-    db = load_db()
+    db = load_db(db_folder)
     for job in jobs:
         print(job)
         if force:
@@ -239,12 +242,13 @@ def delete(force, jobs):
 
 
 @click.command()
-def ipython():
+@click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
+def ipython(db_folder):
     """
     launches ipython with the object 'db' loaded
     """
     from IPython import embed
-    db = load_db()  # NOQA
+    db = load_db(db_folder)  # NOQA
     embed()
 
 
