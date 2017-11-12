@@ -156,8 +156,10 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
             return parser.parse(default)
     jobs = list(jobs)
     for j in jobs:
-        j['start_time'] = parse_time(j, tag='start')
-        j['end_time'] = parse_time(j, tag='end')
+        if 'start_time' not in j:
+            j['start_time'] = parse_time(j, tag='start')
+        if 'end_time' not in j: 
+            j['end_time'] = parse_time(j, tag='end')
         j['readable_start_time'] = str(j['start_time'])
         j['readable_end_time'] = str(j['end_time'])
         try:
@@ -206,8 +208,8 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
 @click.option('--details', help='verbose to see details of the job being updated',
               required=False, type=bool, default=True)
 @click.option('--force/--no-force', help='Force update', required=True)
-@click.argument('jobs', nargs=-1, required=True)
 @click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
+@click.argument('jobs', nargs=-1, required=True)
 def update(state, details, force, jobs, db_folder):
     """
     update the content of the db
@@ -228,8 +230,8 @@ def update(state, details, force, jobs, db_folder):
 
 @click.command()
 @click.option('--force/--no-force', help='Force delete', required=True)
-@click.argument('jobs', nargs=-1, required=True)
 @click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
+@click.argument('jobs', nargs=-1, required=True)
 def delete(force, jobs):
     """
     delete a list of jobs from the db.

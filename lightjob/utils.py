@@ -129,6 +129,11 @@ def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
         if ':' in comp:
             comp, agg_name = comp.split(':', 2)
             agg_ = agg[agg_name]
+        elif '[' in comp and ']' in comp:
+            first, last = comp.index('['), comp.index(']')
+            idx = int(comp[first + 1:last])
+            comp = comp[0:first]
+            agg_ = lambda x:x[idx]
         else:
             agg_ = lambda x: x
         if not val or (val and comp not in val):
@@ -136,8 +141,9 @@ def dict_format(d, field, agg=AGG, if_not_found='raise_exception', **kw):
             break
         else:
             val = val[comp]
+            val = agg_(val)
     if found:
-        return agg_(val)
+        return val
     else:
         if if_not_found == 'raise_exception':
             raise ValueError('field {} does not exist'.format(field))
