@@ -232,7 +232,7 @@ def update(state, details, force, jobs, db_folder):
 @click.option('--force/--no-force', help='Force delete', required=True)
 @click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
 @click.argument('jobs', nargs=-1, required=True)
-def delete(force, jobs):
+def delete(force, db_folder, jobs):
     """
     delete a list of jobs from the db.
     """
