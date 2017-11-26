@@ -158,7 +158,7 @@ def show(state, type, where, filter_by, details, fields, summary, sort, ascendin
     if filter_by:
         space_index = filter_by.index(' ')
         field, expr = filter_by[0:space_index], filter_by[space_index:]
-        func = lambda j: eval('{}{}'.format(dict_format(j, field, db=db), expr))
+        func = lambda j: eval('"{}"{}'.format(dict_format(j, field, db=db), expr))
         jobs = filter(func, jobs)
         jobs = list(jobs)
 
