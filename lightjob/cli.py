@@ -77,6 +77,7 @@ def dump(filename):
 @click.option('--state', default=None, help='filter jobs by state', required=False)
 @click.option('--type', default=None, help='fitler jobs by type', required=False)
 @click.option('--where', default=None, help='filter jobs by where', required=False)
+@click.option('--filter-by', default=None, help='filter jobs by custom python expression, e.g., "field == value"', required=False)
 @click.option('--details/--no-details', default=False, help='show with details', required=False)
 @click.option('--fields', default='', help='show values of fields separated by comma', required=False)
 @click.option('--summary', default='', help='show a specific job by its id', required=False)
@@ -85,7 +86,7 @@ def dump(filename):
 @click.option('--show-fields/--no-show-fields', default=True, help='orde of showing the sorted events', required=False)
 @click.option('--dict-format', default='', help='dict format function to use', required=False)
 @click.option('--db-folder', default=None, help='database folder (default is .lightjob)', required=False)
-def show(state, type, where, details, fields, summary, sort, ascending, show_fields, dict_format, db_folder):
+def show(state, type, where, filter_by, details, fields, summary, sort, ascending, show_fields, dict_format, db_folder):
     """
     show the content of the db
     """
@@ -114,7 +115,6 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
                 return list(map(str, vals))
             else:
                 return pprint.pprint(j, indent=4)
-
     else:
         if details:
             def format_job(j):
@@ -155,6 +155,13 @@ def show(state, type, where, details, fields, summary, sort, ascending, show_fie
         else:
             return parser.parse(default)
     jobs = list(jobs)
+    if filter_by:
+        space_index = filter_by.index(' ')
+        field, expr = filter_by[0:space_index], filter_by[space_index:]
+        func = lambda j: eval('{}{}'.format(dict_format(j, field, db=db), expr))
+        jobs = filter(func, jobs)
+        jobs = list(jobs)
+
     for j in jobs:
         if 'start_time' not in j:
             j['start_time'] = parse_time(j, tag='start')
